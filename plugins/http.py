@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Callable
@@ -25,7 +26,7 @@ _server: HTTPServer | None = None
 _server_thread: threading.Thread | None = None
 _callback: Callable[[str, dict], str] | None = None
 
-PORT = 8080
+PORT = int(os.environ.get("HTTP_PORT", "8080"))
 
 
 # ---------------------------------------------------------------------------

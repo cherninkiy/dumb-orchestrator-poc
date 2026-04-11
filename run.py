@@ -39,7 +39,7 @@ def main() -> None:
     stop_event = threading.Event()
 
     def _handle_signal(sig: int, _frame: object) -> None:
-        print(f"\nReceived signal {sig}, shutting down…")
+        print(f"\nReceived signal {sig}, shutting down...")
         stop_event.set()
 
     signal.signal(signal.SIGINT, _handle_signal)
@@ -47,6 +47,15 @@ def main() -> None:
 
     print("Dumb Orchestrator is running. Press Ctrl+C to stop.")
     stop_event.wait()
+
+    # Gracefully shut down all loaded plugins.
+    for name, plugin in list(plugin_manager.plugins.items()):
+        shutdown_fn = getattr(plugin, "shutdown", None)
+        if shutdown_fn is not None:
+            try:
+                shutdown_fn()
+            except Exception as exc:
+                print(f"Warning: plugin {name!r} shutdown() raised: {exc}")
 
 
 if __name__ == "__main__":

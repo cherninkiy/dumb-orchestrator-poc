@@ -23,15 +23,55 @@ Minimal POC of "dumb orchestrator – smart model". LLM evolves itself by writin
 
 ## Статус
 
-🔧 **Код в разработке** — реализация ядра и базового HTTP‑плагина ведётся в ветке [`core/architecture`](https://github.com/cherninkiy/dumb-orchestrator-poc/tree/core/architecture).  
-После завершения будет открыт Pull Request с полным рабочим POC.
+✅ **Реализовано** — ядро, HTTP‑плагин, тесты и CI доступны в ветке [`copilot/core-architecture`](https://github.com/cherninkiy/dumb-orchestrator-poc/tree/copilot/core-architecture).
 
-## Что будет в PR
+## Быстрый старт
 
-- Ядро с TAOR‑циклом, реестром плагинов и тремя инструментами: `add_plugin`, `run_plugin`, `unload_plugin`.
-- HTTP‑транспорт как плагин (порт 8080).
-- Системный промпт, направляющий модель к осознанной эволюции.
-- Возможность для модели отправлять человеку предложения по улучшению ядра (блоки `[PROPOSAL]`).
+```bash
+# 1. Установить зависимости
+pip install -r requirements.txt
+
+# 2. Создать .env с ключом Anthropic
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+
+# 3. Запустить оркестратор (HTTP-сервер на порту 8080)
+python run.py
+
+# 4. Отправить запрос
+curl -X POST http://localhost:8080/ \
+     -H "Content-Type: application/json" \
+     -d '{"prompt": "Напиши плагин, который возвращает текущее время", "context": {}}'
+```
+
+Порт сервера можно переопределить через переменную окружения `HTTP_PORT`.
+
+## ⚠️ Предупреждение о безопасности
+
+> **Плагины выполняются с теми же привилегиями, что и сам оркестратор.**  
+> Код плагина имеет полный доступ к файловой системе, сети и переменным окружения процесса.  
+> **Не запускайте плагины из ненадёжных источников в продакшн-среде.**  
+> Этот проект является исследовательским POC — запускайте его только в изолированном окружении (sandbox, Docker, VM).
+
+> **Plugins run with the same privileges as the orchestrator.**  
+> Plugin code has unrestricted access to the filesystem, network, and process environment.  
+> **Do not load plugins from untrusted sources in a production environment.**  
+> This project is a research POC — run it only inside an isolated environment (sandbox, Docker, VM).
+
+## Архитектура
+
+```
+dumb-orchestrator-poc/
+├── core/
+│   ├── plugin_manager.py  # Загрузка/горячая замена плагинов (thread-safe)
+│   ├── llm_client.py      # Обёртка Anthropic API с tool use
+│   ├── tool_executor.py   # Маршрутизация вызовов инструментов
+│   ├── taor_loop.py       # Цикл Think→Act→Observe→Repeat
+│   └── utils.py           # Вспомогательные утилиты
+├── plugins/
+│   └── http.py            # HTTP-транспорт (порт задаётся через HTTP_PORT)
+├── system_prompt.txt      # Системный промпт для LLM
+└── run.py                 # Точка входа
+```
 
 ## Лицензия
 
@@ -39,4 +79,4 @@ MIT — свободно используйте идеи, форкайте, ул
 
 ---
 
-*Следите за обновлениями. После выхода PR ссылка появится здесь.*
+*Pull Request: [#1 feat: implement Dumb Orchestrator – Smart Model POC](https://github.com/cherninkiy/dumb-orchestrator-poc/pull/1)*

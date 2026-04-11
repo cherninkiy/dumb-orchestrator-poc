@@ -163,6 +163,55 @@ def test_init_is_called_on_load(manager: PluginManager, plugins_dir: Path) -> No
     assert result == {"initialised": True}
 
 
+def test_call_plugin_non_dict_return_is_wrapped(manager: PluginManager, plugins_dir: Path) -> None:
+    """A plugin returning a non-dict value should be wrapped in {"result": ...}."""
+    code = textwrap.dedent(
+        """\
+        def run(input_data):
+            return 42
+        """
+    )
+    (plugins_dir / "scalar.py").write_text(code)
+    manager.load_plugins()
+    result = manager.call_plugin("scalar", {})
+    assert result == {"result": 42}
+
+
+def test_reload_plugin_calls_shutdown_on_old_version(manager: PluginManager, plugins_dir: Path) -> None:
+    """reload_plugin() must call shutdown() on the previous instance to prevent resource leaks."""
+    shutdown_calls: list[int] = []
+
+    # First version: has a shutdown() that records the call.
+    v1_code = textwrap.dedent(
+        f"""\
+        import sys as _sys
+
+        def shutdown():
+            # Append to the list held in the test scope via the module reference.
+            _sys.modules[__name__]._shutdown_calls.append(1)
+
+        def run(input_data):
+            return {{"version": 1}}
+        """
+    )
+    manager.add_plugin("versioned", v1_code)
+    # Inject the shared list into the loaded module so shutdown() can record the call.
+    manager.plugins["versioned"]._shutdown_calls = shutdown_calls  # type: ignore[attr-defined]
+
+    v2_code = textwrap.dedent(
+        """\
+        def run(input_data):
+            return {"version": 2}
+        """
+    )
+    # Reload should call shutdown() on v1 before replacing it.
+    (plugins_dir / "versioned.py").write_text(v2_code)
+    manager.reload_plugin("versioned")
+
+    assert len(shutdown_calls) == 1, "shutdown() should have been called exactly once during reload"
+    assert manager.call_plugin("versioned", {}) == {"version": 2}
+
+
 def teardown_module(module: object) -> None:
     # Clean up any lingering test modules from sys.modules
     to_remove = [k for k in sys.modules if k.startswith("plugins.")]

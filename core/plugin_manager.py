@@ -22,6 +22,7 @@ class PluginManager:
         """Initialise the manager pointing at *plugins_dir*."""
         self.plugins_dir = plugins_dir
         self.plugins: dict[str, ModuleType] = {}
+        self._lock = threading.RLock()
 
     # ------------------------------------------------------------------
     # Public API
@@ -38,7 +39,8 @@ class PluginManager:
         for path in sorted(self.plugins_dir.glob("*.py")):
             name = path.stem
             try:
-                self._import_plugin(name, path)
+                with self._lock:
+                    self._import_plugin(name, path)
             except Exception:
                 logger.exception("Failed to load plugin %r", name)
 
@@ -47,11 +49,12 @@ class PluginManager:
 
         Returns the result dict, or an error dict on failure / timeout.
         """
-        plugin = self.get_plugin(name)
-        if plugin is None:
-            return {"error": f"Plugin {name!r} is not loaded."}
+        with self._lock:
+            plugin = self.get_plugin(name)
+            if plugin is None:
+                return {"error": f"Plugin {name!r} is not loaded."}
+            run_fn = getattr(plugin, "run", None)
 
-        run_fn = getattr(plugin, "run", None)
         if run_fn is None:
             return {"error": f"Plugin {name!r} has no run() function."}
 
@@ -71,7 +74,7 @@ class PluginManager:
             return {"error": f"Plugin {name!r} timed out after {timeout}s."}
 
         if status == "err":
-            logger.exception("Plugin %r raised an exception", name)
+            logger.error("Plugin %r raised an exception: %s", name, value)
             return {"error": str(value)}
         return value if isinstance(value, dict) else {"result": value}
 
@@ -86,42 +89,59 @@ class PluginManager:
             return {"error": str(exc)}
 
     def reload_plugin(self, name: str) -> dict[str, Any]:
-        """Remove from *sys.modules*, re-import, and update the registry."""
+        """Shut down the old instance (if any), then re-import and update the registry.
+
+        Calling ``shutdown()`` on the previous instance prevents resource leaks
+        (e.g. a stale HTTP server holding onto port 8080).
+        """
         path = self.plugins_dir / f"{name}.py"
         if not path.exists():
             return {"error": f"Plugin file {path} does not exist."}
 
-        module_name = f"plugins.{name}"
-        sys.modules.pop(module_name, None)
+        with self._lock:
+            # Shut down the previous version before replacing it.
+            old_plugin = self.plugins.get(name)
+            if old_plugin is not None:
+                old_shutdown = getattr(old_plugin, "shutdown", None)
+                if old_shutdown is not None:
+                    try:
+                        old_shutdown()
+                    except Exception:
+                        logger.exception("Plugin %r shutdown() raised during reload", name)
 
-        try:
-            self._import_plugin(name, path)
-            return {"status": "ok", "plugin": name}
-        except Exception as exc:
-            logger.exception("Failed to reload plugin %r", name)
-            return {"error": str(exc)}
+            module_name = f"plugins.{name}"
+            sys.modules.pop(module_name, None)
+
+            try:
+                self._import_plugin(name, path)
+                return {"status": "ok", "plugin": name}
+            except Exception as exc:
+                logger.exception("Failed to reload plugin %r", name)
+                return {"error": str(exc)}
 
     def unload_plugin(self, name: str) -> dict[str, Any]:
         """Shut down and remove *name* from the registry (file stays on disk).
 
-        Raises ``ValueError`` if you try to unload a protected plugin (e.g. ``http``).
+        Protected plugins (e.g. ``http``) cannot be unloaded.
         """
         if name in PROTECTED_PLUGINS:
             return {"error": f"Plugin {name!r} is protected and cannot be unloaded."}
 
-        plugin = self.get_plugin(name)
-        if plugin is None:
-            return {"error": f"Plugin {name!r} is not loaded."}
+        with self._lock:
+            plugin = self.get_plugin(name)
+            if plugin is None:
+                return {"error": f"Plugin {name!r} is not loaded."}
 
-        shutdown_fn = getattr(plugin, "shutdown", None)
-        if shutdown_fn is not None:
-            try:
-                shutdown_fn()
-            except Exception:
-                logger.exception("Plugin %r shutdown() raised an exception", name)
+            shutdown_fn = getattr(plugin, "shutdown", None)
+            if shutdown_fn is not None:
+                try:
+                    shutdown_fn()
+                except Exception:
+                    logger.exception("Plugin %r shutdown() raised an exception", name)
 
-        del self.plugins[name]
-        sys.modules.pop(f"plugins.{name}", None)
+            del self.plugins[name]
+            sys.modules.pop(f"plugins.{name}", None)
+
         logger.info("Plugin %r unloaded.", name)
         return {"status": "ok", "plugin": name}
 
@@ -134,7 +154,10 @@ class PluginManager:
     # ------------------------------------------------------------------
 
     def _import_plugin(self, name: str, path: Path) -> None:
-        """Import *path* as ``plugins.<name>`` and store in registry."""
+        """Import *path* as ``plugins.<name>`` and store in registry.
+
+        Must be called with ``self._lock`` held.
+        """
         module_name = f"plugins.{name}"
         spec = importlib.util.spec_from_file_location(module_name, path)
         if spec is None or spec.loader is None:
