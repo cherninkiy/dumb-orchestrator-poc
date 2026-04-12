@@ -1,7 +1,6 @@
 """Tool executor: bridges the LLM tool calls and the PluginManager."""
 
 import logging
-from pathlib import Path
 from typing import Any
 
 import core.metrics as metrics
