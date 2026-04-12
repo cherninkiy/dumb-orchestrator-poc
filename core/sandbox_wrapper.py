@@ -39,6 +39,8 @@ def main() -> None:
 
         result = run_fn(input_data)
         sys.stdout.write(json.dumps({"result": result}, ensure_ascii=False))
+    except (SystemExit, KeyboardInterrupt):
+        raise
     except Exception:  # noqa: BLE001
         sys.stdout.write(json.dumps({"error": traceback.format_exc()}, ensure_ascii=False))
 

@@ -21,7 +21,7 @@ def log_event(event_type: str, data: dict[str, Any]) -> None:
     try:
         with METRICS_FILE.open("a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    except Exception:  # noqa: BLE001
+    except (OSError, PermissionError):  # noqa: BLE001
         logger.exception("Failed to write metrics entry")
 
 

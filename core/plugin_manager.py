@@ -87,7 +87,7 @@ def _read_version_meta(plugins_dir: Path, name: str) -> dict[str, Any]:
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
+        except (json.JSONDecodeError, OSError, ValueError):
             pass
     return {"current_version": 0, "rollback_count": 0}
 
@@ -379,6 +379,8 @@ class PluginManager:
         def _run() -> None:
             try:
                 result_queue.put(("ok", run_fn(input_data)))
+            except (SystemExit, KeyboardInterrupt):
+                raise
             except Exception as exc:  # noqa: BLE001
                 result_queue.put(("err", (exc, tb.format_exc())))
 
