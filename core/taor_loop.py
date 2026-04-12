@@ -114,7 +114,7 @@ class TAORLoop:
         """Initialise the loop.
 
         Args:
-            llm_client: Any object satisfying :class:`~core.llm_protocol.LLMClientProtocol`.
+            llm_client: Any object satisfying :class:`~core.llm.protocol.LLMClientProtocol`.
             tool_executor: Executes tool calls returned by the LLM.
             system_prompt: System prompt injected on every request.
             max_iterations: Hard limit on LLM↔tool turns per request.

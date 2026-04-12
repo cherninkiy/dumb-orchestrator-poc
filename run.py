@@ -34,10 +34,10 @@ from core.llm import get_llm_client
 from core.plugin_manager import PluginManager
 from core.taor_loop import TAORLoop
 from core.tool_executor import ToolExecutor
+from core.config import PLUGINS_DIR as _PLUGINS_DIR_STR, SYSTEM_PROMPT_PATH
 from core.utils import configure_logging, ensure_dir, load_env, read_system_prompt
 
-PLUGINS_DIR = ensure_dir("plugins")
-SYSTEM_PROMPT_PATH = "system_prompt.txt"
+PLUGINS_DIR = ensure_dir(_PLUGINS_DIR_STR)
 
 
 def main() -> None:

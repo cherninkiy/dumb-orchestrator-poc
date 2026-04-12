@@ -32,7 +32,7 @@ class AnthropicClient:
     def __init__(
         self,
         api_key: str,
-        model: str = "claude-3-5-sonnet-20241022",
+        model: str,
     ) -> None:
         """Initialise the client.
 

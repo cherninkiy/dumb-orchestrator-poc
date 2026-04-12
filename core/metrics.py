@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-METRICS_FILE = Path("metrics.jsonl")
+from core.config import METRICS_FILE
 
 logger = logging.getLogger(__name__)
 

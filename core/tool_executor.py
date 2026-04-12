@@ -5,13 +5,11 @@ from pathlib import Path
 from typing import Any
 
 import core.metrics as metrics
-from core.config import ALLOWED_REQUIREMENTS
+from core.config import ALLOWED_REQUIREMENTS, PENDING_REQUIREMENTS_FILE
 from core.plugin_manager import PluginManager
 from core.utils import extract_imports
 
 logger = logging.getLogger(__name__)
-
-PENDING_REQUIREMENTS_FILE = Path("pending_requirements.txt")
 
 
 class ToolExecutor:

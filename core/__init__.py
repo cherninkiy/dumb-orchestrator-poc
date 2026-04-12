@@ -5,7 +5,4 @@ from core.plugin_manager import PluginManager
 from core.taor_loop import TAORLoop
 from core.tool_executor import ToolExecutor
 
-# Backward-compatible alias
-LLMClient = AnthropicClient
-
-__all__ = ["AnthropicClient", "LLMClient", "PluginManager", "ToolExecutor", "TAORLoop"]
+__all__ = ["AnthropicClient", "PluginManager", "ToolExecutor", "TAORLoop"]
