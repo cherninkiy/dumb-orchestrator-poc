@@ -1,55 +1,50 @@
-# dumb-orchestrator-poc
-Minimal POC of "dumb orchestrator – smart model". LLM evolves itself by writing plugins (add_plugin/run_plugin). Inspired by MemPalace (96.6% on LongMemEval) and Claude Code's TAOR. Core is immutable (&lt;150 loc). HTTP transport as a plugin.
+# RawLLM
 
+Minimal POC of "dumb orchestrator – smart model". The LLM evolves itself by writing plugins (`add_plugin` / `run_plugin`). Inspired by MemPalace (96.6% on LongMemEval) and Claude Code’s TAOR loop. The core is immutable (<150 loc). HTTP transport is a plugin.
 
-# Dumb Orchestrator – Smart Model
+## Idea
 
-**Глупый оркестратор, умная модель**  
-Минималистичный POC агента, который эволюционирует через плагины, создаваемые самой LLM.
+Instead of hard-coding complexity into the orchestrator, the model is given two tools:
+- `add_plugin(name, code)` — write and save a new plugin (or overwrite an existing one)
+- `run_plugin(name, input_data)` — execute an already-loaded plugin by name
 
-## Идея
+The core (orchestrator) is **immutable** and deliberately "dumb" (~150 lines). All intelligence — creating new capabilities, coordinating agents, managing memory, parsing data — lives in the LLM’s reasoning and in the plugins it generates. The model decides when to write a plugin and can hot-reload them at any time.
 
-Вместо того чтобы зашивать сложность в код, мы даём модели всего два инструмента:
-- `add_plugin(name, code)` — написать и сохранить новый плагин
-- `run_plugin(name, input_data)` — вызвать существующий плагин
+## Inspiration
 
-Ядро (оркестратор) — неизменяемый, «глупый» (~150 строк). Вся интеллектуальная работа, включая создание новых возможностей, координацию агентов, память, парсинг данных, — ложится на LLM. Модель сама решает, когда и какой плагин написать, и может перезаписывать их на лету (горячая замена).
+- **MemPalace** — the approach that dominated LongMemEval (96.6%) without complex RAG, simply by giving the model raw data and freedom to decide.
+- **Claude Code** — the TAOR (Think‑Act‑Observe‑Repeat) architecture and the "dumb orchestrator, smart model" principle.
+- **Critique of over-engineered RAG pipelines** — give the model a clean context and let it decide.
 
-## Вдохновение
+## Status
 
-- **MemPalace / Милла Йовович** — подход, который разнёс LongMemEval (96.6%) без сложного RAG, просто дав модели сырые данные и свободу.
-- **Claude Code** — архитектура TAOR (Think‑Act‑Observe‑Repeat) и принцип «глупый оркестратор».
-- **Критика переусложнённых RAG‑пайплайнов** — даём модели чистый контекст и право решать.
+✅ **Implemented** — core, HTTP plugin, tests and CI available on branch [`copilot/core-architecture`](https://github.com/cherninkiy/dumb-orchestrator-poc/tree/copilot/core-architecture).
 
-## Статус
-
-✅ **Реализовано** — ядро, HTTP‑плагин, тесты и CI доступны в ветке [`copilot/core-architecture`](https://github.com/cherninkiy/dumb-orchestrator-poc/tree/copilot/core-architecture).
-
-## Быстрый старт
+## Quick start
 
 ```bash
-# 1. Установить зависимости
+# 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Создать .env с ключом Anthropic
+# 2. Create .env with your Anthropic API key
 echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
 
-# 3. Запустить оркестратор (HTTP-сервер на порту 8080)
+# 3. Start the orchestrator (HTTP server on port 8080)
 python run.py
 
-# 4. Отправить запрос
+# 4. Send a request
 curl -X POST http://localhost:8080/ \
      -H "Content-Type: application/json" \
-     -d '{"prompt": "Напиши плагин, который возвращает текущее время", "context": {}}'
+     -d '{"prompt": "Write a plugin that returns the current time", "context": {}}'
 ```
 
-Порт сервера можно переопределить через переменную окружения `HTTP_PORT`.
+The server port can be overridden via the `HTTP_PORT` environment variable.
 
 ## Running with Free / Lightweight LLMs
 
 `run.py` supports any OpenAI-compatible provider via the `LLM_PROVIDER`
-environment variable (default: `anthropic`).  All Part-A security and versioning
-enhancements are automatically active.
+environment variable (default: `anthropic`). All security and versioning
+features are automatically active.
 
 ### Supported providers
 
@@ -144,19 +139,14 @@ rawllm config set LLM_PROVIDER groq
 rawllm config set ALLOWED_REQUIREMENTS "json,datetime,requests"
 ```
 
+## ⚠️ Security Warning
 
-
-> **Плагины выполняются с теми же привилегиями, что и сам оркестратор.**  
-> Код плагина имеет полный доступ к файловой системе, сети и переменным окружения процесса.  
-> **Не запускайте плагины из ненадёжных источников в продакшн-среде.**  
-> Этот проект является исследовательским POC — запускайте его только в изолированном окружении (sandbox, Docker, VM).
-
-> **Plugins run with the same privileges as the orchestrator.**  
-> Plugin code has unrestricted access to the filesystem, network, and process environment.  
-> **Do not load plugins from untrusted sources in a production environment.**  
+> **Plugins run with the same privileges as the orchestrator.**
+> Plugin code has unrestricted access to the filesystem, network, and process environment.
+> **Do not load plugins from untrusted sources in a production environment.**
 > This project is a research POC — run it only inside an isolated environment (sandbox, Docker, VM).
 
-## Архитектура
+## Architecture
 
 ```
 rawllm/  (dumb-orchestrator-poc)
@@ -168,26 +158,26 @@ rawllm/  (dumb-orchestrator-poc)
 │   │   └── clients/
 │   │       ├── anthropic.py    # AnthropicClient
 │   │       └── openai_compat.py# OpenAICompatibleClient (Groq, Gemini, Ollama, …)
-│   ├── plugin_manager.py       # Загрузка/горячая замена плагинов, версионирование, sandbox
-│   ├── tool_executor.py        # Маршрутизация вызовов инструментов + проверка зависимостей
-│   ├── taor_loop.py            # Цикл Think→Act→Observe→Repeat
-│   ├── config.py               # Настройки: trusted_plugins, allowed_requirements
-│   ├── metrics.py              # Логирование событий в metrics.jsonl
-│   ├── sandbox_wrapper.py      # Обёртка для изолированного запуска плагинов в subprocess
-│   └── utils.py                # Вспомогательные утилиты + extract_imports
+│   ├── plugin_manager.py       # Plugin loading, hot-reload, versioning, sandbox
+│   ├── tool_executor.py        # Tool-call routing + dependency gating
+│   ├── taor_loop.py            # Think → Act → Observe → Repeat loop
+│   ├── config.py               # Settings: trusted_plugins, allowed_requirements
+│   ├── metrics.py              # Event logging to metrics.jsonl
+│   ├── sandbox_wrapper.py      # Isolated subprocess wrapper for untrusted plugins
+│   └── utils.py                # Shared utilities + extract_imports
 ├── plugins/
-│   └── http.py                 # HTTP-транспорт (порт задаётся через HTTP_PORT)
-├── plugins_store/              # Версионированное хранилище плагинов (создаётся автоматически)
-│   ├── current/                # Символические ссылки на активные версии
-│   └── archive/{name}/         # Архив предыдущих версий с метриками
+│   └── http.py                 # HTTP transport plugin (port set via HTTP_PORT)
+├── plugins_store/              # Versioned plugin storage (created automatically)
+│   ├── current/                # Symlinks to active versions
+│   └── archive/{name}/         # Previous versions with metrics snapshots
 ├── cli.py                      # CLI entry point (rawllm)
-├── system_prompt.txt           # Системный промпт для LLM
-└── run.py                      # Единая точка входа (Anthropic / Groq / Gemini / Ollama / …)
+├── system_prompt.txt           # LLM system prompt
+└── run.py                      # Unified entry point (Anthropic / Groq / Gemini / Ollama / …)
 ```
 
-## Лицензия
+## License
 
-MIT — свободно используйте идеи, форкайте, улучшайте.
+MIT — use the ideas freely, fork, and improve.
 
 ---
 
