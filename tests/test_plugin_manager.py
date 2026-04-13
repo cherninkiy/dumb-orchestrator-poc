@@ -104,6 +104,8 @@ def test_call_plugin_uses_docker_backend_when_enabled(manager: PluginManager, pl
     manager.load_plugins()
 
     with patch("core.plugin_manager.SANDBOX_BACKEND", "docker"), patch(
+        "core.plugin_manager.SANDBOX_TIMEOUT", 45
+    ), patch(
         "core.plugin_manager.DockerSandboxRunner"
     ) as runner_cls:
         runner = runner_cls.return_value
@@ -112,7 +114,7 @@ def test_call_plugin_uses_docker_backend_when_enabled(manager: PluginManager, pl
         result = manager.call_plugin("echo", {"value": 42})
 
     assert result == {"echo": 42}
-    runner.run_plugin.assert_called_once_with("echo", {"value": 42}, 30)
+    runner.run_plugin.assert_called_once_with("echo", {"value": 42}, 45)
 
 
 def test_call_plugin_falls_back_to_subprocess_when_docker_not_required(
