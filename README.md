@@ -40,6 +40,38 @@ curl -X POST http://localhost:8080/ \
 
 The server port can be overridden via the `HTTP_PORT` environment variable.
 
+## Docker sandbox (WSL)
+
+For secure plugin execution use Docker backend in WSL. This enables two-user
+model and filesystem isolation:
+
+- `rawllm-core` - orchestrator process user
+- `rawllm-plugin` - plugin subprocess user inside sandbox container
+
+### 1) Build sandbox image
+
+```bash
+docker build -t rawllm/plugin-sandbox:latest -f docker/sandbox/Dockerfile .
+```
+
+### 2) Enable docker backend
+
+```bash
+echo "SANDBOX_BACKEND=docker" >> .env
+echo "SANDBOX_DOCKER_IMAGE=rawllm/plugin-sandbox:latest" >> .env
+```
+
+### 3) Run tests in WSL (Docker required)
+
+```bash
+pytest -q
+```
+
+When docker backend is enabled, plugin execution uses isolated volumes:
+- `rawllm_workspace` (rw)
+- `rawllm_core_repo` (ro snapshot)
+- `rawllm_plugin_store` (ro snapshot)
+
 ## Running with Free / Lightweight LLMs
 
 `run.py` supports any OpenAI-compatible provider via the `LLM_PROVIDER`
@@ -53,8 +85,9 @@ features are automatically active.
 | `anthropic` *(default)* | `ANTHROPIC_API_KEY` | `claude-3-5-sonnet-20241022` |
 | `groq` | `GROQ_API_KEY` | `llama3-70b-8192` |
 | `gemini` | `GEMINI_API_KEY` | `gemini-2.0-flash` |
-| `openrouter` | `OPENROUTER_API_KEY` | `mistralai/mistral-7b-instruct:free` |
+| `openrouter` | `OPEN_ROUTER_API_KEY` | `qwen/qwen3-coder:free` |
 | `ollama` | *(none required)* | `llama3.2:3b` |
+| `ollama-qwen-coder` | *(none required)* | `qwen2.5-coder:7b` |
 
 Override any default with `LLM_MODEL` and `LLM_BASE_URL`.
 
@@ -72,7 +105,7 @@ LLM_PROVIDER=gemini python run.py
 
 ### OpenRouter (free models)
 ```bash
-echo "OPENROUTER_API_KEY=sk-or-..." >> .env
+echo "OPEN_ROUTER_API_KEY=sk-or-..." >> .env
 LLM_PROVIDER=openrouter python run.py
 # Use a specific free model:
 LLM_PROVIDER=openrouter LLM_MODEL=google/gemma-3-27b-it:free python run.py
@@ -87,6 +120,24 @@ ollama pull llama3.2:3b   # or any model you prefer
 LLM_PROVIDER=ollama python run.py
 # Custom model:
 LLM_PROVIDER=ollama LLM_MODEL=mistral python run.py
+```
+
+### Local Qwen Coder 7B for container testing
+```bash
+# 1. Pull the local coding model in WSL / host environment
+ollama pull qwen2.5-coder:7b
+
+# 2. Run RawLLM against the dedicated provider alias
+LLM_PROVIDER=ollama-qwen-coder python run.py
+```
+
+If the orchestrator itself runs in a container and Ollama stays on the host,
+override the endpoint explicitly:
+
+```bash
+LLM_PROVIDER=ollama-qwen-coder \
+LLM_BASE_URL=http://host.docker.internal:11434/v1 \
+python run.py
 ```
 
 ## CLI (`rawllm`)
@@ -116,6 +167,13 @@ rawllm plugin show my_plugin
 rawllm plugin add my_plugin path/to/code.py
 rawllm plugin rollback my_plugin
 ```
+
+## Plugin authoring contract
+
+Use module-level docstring in every plugin as a prompt for RawLLM. The
+docstring should describe plugin role, input/output contract, operational
+constraints, and failure behavior. See [plugins/http.py](plugins/http.py) as a
+reference template.
 
 ### Dependency approval
 ```bash

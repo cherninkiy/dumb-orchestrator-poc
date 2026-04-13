@@ -3,6 +3,7 @@
 import sys
 import textwrap
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -96,6 +97,39 @@ def test_call_plugin_timeout(manager: PluginManager, plugins_dir: Path) -> None:
     result = manager.call_plugin("slow", {}, timeout=1)
     assert "error" in result
     assert "timed out" in result["error"]
+
+
+def test_call_plugin_uses_docker_backend_when_enabled(manager: PluginManager, plugins_dir: Path) -> None:
+    (plugins_dir / "echo.py").write_text(DUMMY_PLUGIN_CODE)
+    manager.load_plugins()
+
+    with patch("core.plugin_manager.SANDBOX_BACKEND", "docker"), patch(
+        "core.plugin_manager.DockerSandboxRunner"
+    ) as runner_cls:
+        runner = runner_cls.return_value
+        runner.run_plugin.return_value = ({"echo": 42}, 1.0, True, None, None)
+
+        result = manager.call_plugin("echo", {"value": 42})
+
+    assert result == {"echo": 42}
+    runner.run_plugin.assert_called_once_with("echo", {"value": 42}, 30)
+
+
+def test_call_plugin_falls_back_to_subprocess_when_docker_not_required(
+    manager: PluginManager, plugins_dir: Path
+) -> None:
+    (plugins_dir / "echo.py").write_text(DUMMY_PLUGIN_CODE)
+    manager.load_plugins()
+
+    with patch("core.plugin_manager.SANDBOX_BACKEND", "docker"), patch(
+        "core.plugin_manager.SANDBOX_DOCKER_REQUIRED", False
+    ), patch("core.plugin_manager.DockerSandboxRunner") as runner_cls:
+        runner = runner_cls.return_value
+        runner.run_plugin.return_value = ({"error": "docker down"}, 1.0, False, "DockerError", "docker down")
+
+        result = manager.call_plugin("echo", {"value": 5})
+
+    assert result == {"echo": 5}
 
 
 def test_add_plugin_writes_and_loads(manager: PluginManager, plugins_dir: Path) -> None:
@@ -240,7 +274,7 @@ def test_reload_plugin_calls_shutdown_on_old_version(manager: PluginManager, plu
 
     # First version: has a shutdown() that records the call.
     v1_code = textwrap.dedent(
-        f"""\
+        """\
         import sys as _sys
 
         def shutdown():
