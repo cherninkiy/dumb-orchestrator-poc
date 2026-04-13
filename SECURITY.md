@@ -30,8 +30,23 @@ You can expect an acknowledgement within **72 hours** and a status update within
 
 ## Known Security Considerations
 
-> **Plugins run with the same privileges as the orchestrator process.**
-> This is by design for the POC. Do **not** run this system in a production environment
-> or with untrusted input without adding additional OS-level sandboxing (e.g., Docker, seccomp, nsjail).
+RawLLM supports two plugin sandbox backends:
 
-The built-in subprocess sandbox (`core/sandbox_wrapper.py`) provides process isolation but does **not** restrict filesystem or network access within the subprocess.
+1. `SANDBOX_BACKEND=subprocess` (legacy)
+2. `SANDBOX_BACKEND=docker` (recommended)
+
+When docker backend is enabled, untrusted plugins run as `rawllm-plugin` with:
+
+- read-only root filesystem
+- network disabled (`--network none`)
+- dropped capabilities + `no-new-privileges`
+- isolated volumes only:
+  - workspace (rw)
+  - core_repo snapshot (ro)
+  - plugin_store snapshot (ro)
+
+The orchestrator process remains under `rawllm-core`.
+
+Residual risk: this project is still a research POC and should be deployed only
+in controlled environments. Validate your container runtime hardening settings
+and image supply chain before production use.

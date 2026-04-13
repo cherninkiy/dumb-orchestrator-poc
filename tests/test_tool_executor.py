@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.tool_executor import ToolExecutor
+from core.tool_executor import ToolExecutor, _append_pending_requirements
 
 
 @pytest.fixture()
@@ -85,3 +85,15 @@ def test_add_plugin_allows_approved_imports(mock_pm: MagicMock) -> None:
 
     mock_pm.add_plugin.assert_called_once()
     assert result.get("status") == "ok"
+
+
+def test_append_pending_requirements_logs_on_oserror(tmp_path: Path) -> None:
+    """I/O errors while writing pending requirements must be logged, not raised."""
+    pending_file = tmp_path / "pending_requirements.txt"
+
+    with patch("core.tool_executor.PENDING_REQUIREMENTS_FILE", pending_file), patch(
+        "pathlib.Path.open", side_effect=OSError("disk error")
+    ), patch("core.tool_executor.logger.exception") as log_exc:
+        _append_pending_requirements("plugin_x", ["requests"])
+
+    log_exc.assert_called_once_with("Failed to write pending_requirements.txt")

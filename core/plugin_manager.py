@@ -26,7 +26,8 @@ from types import ModuleType
 from typing import Any
 
 import core.metrics as metrics
-from core.config import ALLOWED_REQUIREMENTS, SANDBOX_TIMEOUT, TRUSTED_PLUGINS
+from core.config import ALLOWED_REQUIREMENTS, SANDBOX_BACKEND, SANDBOX_DOCKER_REQUIRED, SANDBOX_TIMEOUT, TRUSTED_PLUGINS
+from core.docker_sandbox import DockerSandboxRunner
 from core.utils import extract_imports
 
 logger = logging.getLogger(__name__)
@@ -97,7 +98,7 @@ def _read_version_meta(plugins_dir: Path, name: str) -> dict[str, Any]:
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError, ValueError):
+        except (json.JSONDecodeError, OSError):
             pass
     return {"current_version": 0, "rollback_count": 0}
 
@@ -163,6 +164,7 @@ class PluginManager:
         self._lock = threading.RLock()
         # In-memory metrics snapshot per plugin (updated after each execution).
         self._exec_counts: dict[str, dict[str, Any]] = {}
+        self._docker_runner: DockerSandboxRunner | None = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -233,9 +235,6 @@ class PluginManager:
                 old_ver = self._current_version_str(name)
                 new_ver = _archive_plugin(self.plugins_dir, name, old_code, snapshot)
                 metrics.log_version_change(name, old_ver, new_ver)
-            else:
-                # First time – still create the store entry.
-                _update_current_symlink(self.plugins_dir, name, path)
 
             path.write_text(code, encoding="utf-8")
             # Ensure mtime differs from any cached .pyc so Python recompiles on import.
@@ -425,6 +424,11 @@ class PluginManager:
 
         Returns (result, exec_ms, success, error_type, traceback_str).
         """
+        if SANDBOX_BACKEND == "docker":
+            docker_result = self._call_docker_subprocess(name, input_data, timeout)
+            if docker_result is not None:
+                return docker_result
+
         plugin_path = self.plugins_dir / f"{name}.py"
         payload = json.dumps({"plugin_path": str(plugin_path.resolve()), "input_data": input_data})
 
@@ -455,6 +459,22 @@ class PluginManager:
 
         result = data.get("result", data)
         return result if isinstance(result, dict) else {"result": result}, exec_ms, True, None, None
+
+    def _call_docker_subprocess(
+        self,
+        name: str,
+        input_data: dict[str, Any],
+        timeout: int,
+    ) -> tuple[dict[str, Any], float, bool, str | None, str | None] | None:
+        if self._docker_runner is None:
+            self._docker_runner = DockerSandboxRunner(self.plugins_dir)
+
+        result = self._docker_runner.run_plugin(name, input_data, SANDBOX_TIMEOUT if timeout == 30 else timeout)
+        if result[2] is True:
+            return result
+        if SANDBOX_DOCKER_REQUIRED:
+            return result
+        return None
 
     def _read_plugin_code(self, name: str) -> str:
         path = self.plugins_dir / f"{name}.py"

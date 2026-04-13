@@ -270,7 +270,18 @@ def config_group() -> None:
 @config_group.command("show")
 def config_show() -> None:
     """Print all configuration variables."""
-    from core.config import ALLOWED_REQUIREMENTS, SANDBOX_TIMEOUT, TRUSTED_PLUGINS
+    from core.config import (
+        ALLOWED_REQUIREMENTS,
+        RAWLLM_CORE_USER,
+        SANDBOX_BACKEND,
+        SANDBOX_CORE_REPO_VOLUME,
+        SANDBOX_DOCKER_IMAGE,
+        SANDBOX_PLUGIN_STORE_VOLUME,
+        SANDBOX_PLUGIN_USER,
+        SANDBOX_TIMEOUT,
+        SANDBOX_WORKSPACE_VOLUME,
+        TRUSTED_PLUGINS,
+    )
     from core.llm.registry import LLM_PROVIDERS
 
     provider = os.environ.get("LLM_PROVIDER", "anthropic")
@@ -279,6 +290,13 @@ def config_show() -> None:
     click.echo(f"LLM_MODEL            = {model}")
     click.echo(f"TRUSTED_PLUGINS      = {TRUSTED_PLUGINS}")
     click.echo(f"ALLOWED_REQUIREMENTS = {ALLOWED_REQUIREMENTS}")
+    click.echo(f"RAWLLM_CORE_USER     = {RAWLLM_CORE_USER}")
+    click.echo(f"SANDBOX_PLUGIN_USER  = {SANDBOX_PLUGIN_USER}")
+    click.echo(f"SANDBOX_BACKEND      = {SANDBOX_BACKEND}")
+    click.echo(f"SANDBOX_DOCKER_IMAGE = {SANDBOX_DOCKER_IMAGE}")
+    click.echo(f"WORKSPACE_VOLUME     = {SANDBOX_WORKSPACE_VOLUME}")
+    click.echo(f"CORE_REPO_VOLUME     = {SANDBOX_CORE_REPO_VOLUME}")
+    click.echo(f"PLUGIN_STORE_VOLUME  = {SANDBOX_PLUGIN_STORE_VOLUME}")
     click.echo(f"SANDBOX_TIMEOUT      = {SANDBOX_TIMEOUT}s")
     click.echo(f"PLUGINS_DIR          = {PLUGINS_DIR}")
 

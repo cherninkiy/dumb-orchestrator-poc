@@ -1,14 +1,20 @@
-"""HTTP transport plugin.
+"""Prompt for RawLLM: act as an HTTP transport bridge.
 
-Starts a ThreadingHTTPServer on port 8080 in a background daemon thread.
+Role:
+1. Expose HTTP API for incoming user prompts.
+2. Forward each valid request to the orchestrator callback.
+3. Return callback output as JSON without mutating business logic.
 
-Endpoint:
-    POST /   – accepts JSON {"prompt": "...", "context": {...}}
-               returns JSON {"answer": "..."}
-    GET  /   – returns a simple HTML status page.
+Contract:
+- POST / accepts JSON: {"prompt": str, "context": dict}
+- Successful response: {"answer": str}
+- Error response: {"error": str} with proper HTTP status code
+- GET / returns a lightweight status page for health checks
 
-The plugin is initialised by passing a callback via ``init(callback)``.
-It does **not** import anything from the ``core`` package.
+Operational constraints:
+- Keep server in a daemon thread so orchestrator remains responsive.
+- Do not import from core modules directly.
+- Handle malformed input defensively and never crash server loop.
 """
 
 from __future__ import annotations
