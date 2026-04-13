@@ -41,9 +41,9 @@ When docker backend is enabled, untrusted plugins run as `rawllm-plugin` with:
 - network disabled (`--network none`)
 - dropped capabilities + `no-new-privileges`
 - isolated volumes only:
-	- workspace (rw)
-	- core_repo snapshot (ro)
-	- plugin_store snapshot (ro)
+  - workspace (rw)
+  - core_repo snapshot (ro)
+  - plugin_store snapshot (ro)
 
 The orchestrator process remains under `rawllm-core`.
 

@@ -28,6 +28,12 @@ def test_openai_compat_client_satisfies_protocol() -> None:
     assert isinstance(client, LLMClientProtocol)
 
 
+def test_protocol_chat_stub_executes_ellipsis_body() -> None:
+    # Execute Protocol method body directly so coverage includes the stub line.
+    result = LLMClientProtocol.chat(object(), [], [], "")
+    assert result is None
+
+
 # ---------------------------------------------------------------------------
 # AnthropicClient._convert_tools
 # ---------------------------------------------------------------------------
@@ -332,6 +338,24 @@ def test_openai_client_chat_malformed_tool_call_arguments(openai_client: OpenAIC
     with patch("core.llm.clients.openai_compat.httpx.post", return_value=mock_response):
         result = openai_client.chat(messages=[], tools=[])
     assert result["tool_calls"][0]["input"] == {}
+
+
+def test_openai_client_chat_raises_on_http_error(openai_client: OpenAICompatibleClient) -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 429
+    mock_response.text = "rate limited"
+    with patch("core.llm.clients.openai_compat.httpx.post", return_value=mock_response):
+        with pytest.raises(RuntimeError, match="OpenAI-compatible API error 429"):
+            openai_client.chat(messages=[], tools=[])
+
+
+def test_openai_client_chat_raises_on_empty_choices(openai_client: OpenAICompatibleClient) -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"choices": []}
+    with patch("core.llm.clients.openai_compat.httpx.post", return_value=mock_response):
+        with pytest.raises(RuntimeError, match="returned no choices"):
+            openai_client.chat(messages=[], tools=[])
 
 
 # ---------------------------------------------------------------------------

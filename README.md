@@ -42,10 +42,11 @@ The server port can be overridden via the `HTTP_PORT` environment variable.
 
 ## Docker sandbox (WSL)
 
-For secure plugin execution use Docker backend in WSL. This enables two-user
-model and filesystem isolation:
+For more isolated plugin execution in WSL, use the Docker backend. In this
+mode, untrusted plugins run under a separate user and container filesystem
+boundary rather than sharing the orchestrator process privileges.
 
-- `rawllm-core` - orchestrator process user
+- `rawllm-core` - orchestrator process user on host side
 - `rawllm-plugin` - plugin subprocess user inside sandbox container
 
 ### 1) Build sandbox image
@@ -199,10 +200,13 @@ rawllm config set ALLOWED_REQUIREMENTS "json,datetime,requests"
 
 ## ⚠️ Security Warning
 
-> **Plugins run with the same privileges as the orchestrator.**
-> Plugin code has unrestricted access to the filesystem, network, and process environment.
+> The statement "plugins run with the same privileges as the orchestrator"
+> applies to trusted in-process plugins and the legacy subprocess backend.
+> When `SANDBOX_BACKEND=docker` is enabled, untrusted plugins run in a separate
+> container with reduced privileges and isolated mounted volumes.
 > **Do not load plugins from untrusted sources in a production environment.**
-> This project is a research POC — run it only inside an isolated environment (sandbox, Docker, VM).
+> This project is a research POC — run it only inside a hardened isolated
+> environment (sandbox, Docker, VM), and review Docker runtime permissions.
 
 ## Architecture
 

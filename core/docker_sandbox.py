@@ -135,7 +135,7 @@ class DockerSandboxRunner:
         self._copy_tree(core_source, core_staging)
         self._copy_tree(plugin_source, plugin_staging)
 
-        self._ensure_volume(SANDBOX_WORKSPACE_VOLUME)
+        self._init_workspace_volume()
         self._sync_volume_from_dir(SANDBOX_CORE_REPO_VOLUME, core_staging)
         self._sync_volume_from_dir(SANDBOX_PLUGIN_STORE_VOLUME, plugin_staging)
 
@@ -148,13 +148,35 @@ class DockerSandboxRunner:
         return p
 
     def _copy_tree(self, src: Path, dst: Path) -> None:
+        # Guard against copying a source tree into its own descendant.
+        try:
+            src.relative_to(dst)
+            raise DockerSandboxError(f"Invalid staging path: source {src} is nested under destination {dst}")
+        except ValueError:
+            pass
+        try:
+            dst.relative_to(src)
+            raise DockerSandboxError(f"Invalid staging path: destination {dst} is nested under source {src}")
+        except ValueError:
+            pass
+
         if dst.exists():
             shutil.rmtree(dst)
         dst.parent.mkdir(parents=True, exist_ok=True)
+
+        staging_name = self._staging_dir.name
         shutil.copytree(
             src,
             dst,
-            ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc", ".pytest_cache", ".venv", "venv"),
+            ignore=shutil.ignore_patterns(
+                ".git",
+                "__pycache__",
+                "*.pyc",
+                ".pytest_cache",
+                ".venv",
+                "venv",
+                staging_name,
+            ),
             dirs_exist_ok=False,
         )
 
@@ -181,6 +203,38 @@ class DockerSandboxRunner:
         if proc.returncode != 0:
             err = proc.stderr.strip() or proc.stdout.strip() or "volume create failed"
             raise DockerSandboxError(f"Failed to create volume {name!r}: {err}")
+
+    def _init_workspace_volume(self) -> None:
+        self._ensure_volume(SANDBOX_WORKSPACE_VOLUME)
+        script = (
+            "mkdir -p /workspace && "
+            "chown -R \"$PLUGIN_USER\" /workspace 2>/dev/null || true; "
+            "chmod -R 0777 /workspace"
+        )
+        proc = subprocess.run(
+            [
+                "docker",
+                "run",
+                "--rm",
+                "--user",
+                "root",
+                "-e",
+                f"PLUGIN_USER={SANDBOX_PLUGIN_USER}",
+                "-v",
+                f"{SANDBOX_WORKSPACE_VOLUME}:/workspace",
+                SANDBOX_DOCKER_IMAGE,
+                "sh",
+                "-c",
+                script,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        if proc.returncode != 0:
+            err = proc.stderr.strip() or proc.stdout.strip() or "workspace init failed"
+            raise DockerSandboxError(f"Failed to initialize workspace volume {SANDBOX_WORKSPACE_VOLUME!r}: {err}")
 
     def _sync_volume_from_dir(self, volume_name: str, source_dir: Path) -> None:
         self._ensure_volume(volume_name)

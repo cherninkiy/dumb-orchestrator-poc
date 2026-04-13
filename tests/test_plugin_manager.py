@@ -282,7 +282,7 @@ def test_reload_plugin_calls_shutdown_on_old_version(manager: PluginManager, plu
             _sys.modules[__name__]._shutdown_calls.append(1)
 
         def run(input_data):
-            return {{"version": 1}}
+            return {"version": 1}
         """
     )
     manager.add_plugin("versioned", v1_code)

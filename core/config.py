@@ -1,6 +1,7 @@
 """Runtime configuration for the orchestrator."""
 
 import os
+import tempfile
 from pathlib import Path
 
 
@@ -51,7 +52,10 @@ SANDBOX_PLUGIN_STORE_MOUNT: str = os.environ.get("SANDBOX_PLUGIN_STORE_MOUNT", "
 # Source directories copied into read-only volumes before plugin execution.
 SANDBOX_CORE_REPO_SOURCE: str = os.environ.get("SANDBOX_CORE_REPO_SOURCE", ".")
 SANDBOX_PLUGIN_STORE_SOURCE: str = os.environ.get("SANDBOX_PLUGIN_STORE_SOURCE", "plugins")
-SANDBOX_STAGING_DIR: str = os.environ.get("SANDBOX_STAGING_DIR", ".rawllm_staging")
+SANDBOX_STAGING_DIR: str = os.environ.get(
+    "SANDBOX_STAGING_DIR",
+    str(Path(tempfile.gettempdir()) / "rawllm_staging"),
+)
 
 # Hard fail when docker backend is requested but not available.
 SANDBOX_DOCKER_REQUIRED: bool = _env_bool("SANDBOX_DOCKER_REQUIRED", True)

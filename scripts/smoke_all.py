@@ -26,7 +26,7 @@ PROVIDERS_TO_TEST = [
 ]
 
 
-def test_provider(provider: str) -> tuple[bool, str]:
+def test_provider(provider: str) -> tuple[bool | None, str]:
     cfg = LLM_PROVIDERS.get(provider, {})
     key_var = cfg.get("api_key_env")
 
