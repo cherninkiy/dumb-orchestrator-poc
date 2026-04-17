@@ -18,7 +18,7 @@ The core (orchestrator) is **immutable** and deliberately "dumb" (~150 lines). A
 
 ## Status
 
-✅ **Implemented** — core, HTTP plugin, tests and CI available on branch [`copilot/core-architecture`](https://github.com/cherninkiy/dumb-orchestrator-poc/tree/copilot/core-architecture).
+✅ **Implemented** — core, HTTP plugin, tests and CI.
 
 ## Quick start
 
@@ -241,6 +241,3 @@ rawllm/  (dumb-orchestrator-poc)
 
 MIT — use the ideas freely, fork, and improve.
 
----
-
-*Pull Request: [#1 feat: implement Dumb Orchestrator – Smart Model POC](https://github.com/cherninkiy/dumb-orchestrator-poc/pull/1)*
