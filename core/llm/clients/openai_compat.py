@@ -10,6 +10,7 @@ Tool definitions are already in OpenAI ``function`` schema format (the
 ``parameters`` key), so those are passed through unchanged too.
 """
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -120,3 +121,12 @@ class OpenAICompatibleClient:
 
         content = (message.get("content") or "").strip()
         return {"type": "text", "content": content}
+
+    async def chat_async(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        system: str = "",
+    ) -> dict[str, Any]:
+        """Async variant of :meth:`chat` via :func:`asyncio.to_thread`."""
+        return await asyncio.to_thread(self.chat, messages, tools, system)

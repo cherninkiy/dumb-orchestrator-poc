@@ -17,6 +17,7 @@ OpenAI → Anthropic conversions performed here:
 * Tool definitions: ``parameters`` key → ``input_schema`` key.
 """
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -93,6 +94,15 @@ class AnthropicClient:
         # "end_turn" or any other stop reason → extract text
         text_parts = [block.text for block in response.content if hasattr(block, "text")]
         return {"type": "text", "content": "\n".join(text_parts).strip()}
+
+    async def chat_async(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        system: str = "",
+    ) -> dict[str, Any]:
+        """Async variant of :meth:`chat` via :func:`asyncio.to_thread`."""
+        return await asyncio.to_thread(self.chat, messages, tools, system)
 
     # ------------------------------------------------------------------
     # Private translation helpers

@@ -27,6 +27,7 @@ Tool definitions use the OpenAI schema (``parameters`` key).  Adapters for
 non-OpenAI providers (e.g. Anthropic) convert internally.
 """
 
+import asyncio
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -62,3 +63,12 @@ class LLMClientProtocol(Protocol):
                 ]}
         """
         ...
+
+    async def chat_async(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        system: str = "",
+    ) -> dict[str, Any]:
+        """Async variant of :meth:`chat`. Default implementation wraps the sync method."""
+        return await asyncio.to_thread(self.chat, messages, tools, system)
