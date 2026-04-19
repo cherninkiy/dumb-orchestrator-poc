@@ -26,6 +26,7 @@ Tool result turns (one per tool call)::
     {"role": "tool", "tool_call_id": <str>, "content": <json-str>}
 """
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -98,6 +99,35 @@ TOOLS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_plugins_parallel",
+            "description": (
+                "Execute multiple plugins concurrently in a single Act and return all results. "
+                "Use this instead of sequential run_plugin calls when the plugins are independent."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "calls": {
+                        "type": "array",
+                        "description": "List of [plugin_name, input_data] pairs to run in parallel.",
+                        "items": {
+                            "type": "array",
+                            "prefixItems": [
+                                {"type": "string", "description": "Plugin name."},
+                                {"type": "object", "description": "Input dict for the plugin."},
+                            ],
+                            "minItems": 2,
+                            "maxItems": 2,
+                        },
+                    },
+                },
+                "required": ["calls"],
+            },
+        },
+    },
 ]
 
 
@@ -127,6 +157,12 @@ class TAORLoop:
     def process_request(
         self, user_prompt: str, context: dict[str, Any] | None = None
     ) -> str:
+        """Synchronous wrapper around :meth:`process_request_async` for backward compatibility."""
+        return asyncio.run(self.process_request_async(user_prompt, context))
+
+    async def process_request_async(
+        self, user_prompt: str, context: dict[str, Any] | None = None
+    ) -> str:
         """Process a user request through the TAOR cycle and return the final answer.
 
         Args:
@@ -147,7 +183,7 @@ class TAORLoop:
         for iteration in range(self._max_iterations):
             logger.debug("TAOR iteration %d/%d", iteration + 1, self._max_iterations)
 
-            response = self._llm.chat(
+            response = await self._llm.chat_async(
                 messages=messages,
                 tools=TOOLS,
                 system=self._system_prompt,
@@ -178,9 +214,11 @@ class TAORLoop:
                 }
             )
 
-            # Execute each tool and append individual tool-result messages.
-            for call in tool_calls:
-                result = self._dispatch(call["name"], call["input"])
+            # Execute all tool calls in parallel and append individual tool-result messages.
+            results = await asyncio.gather(
+                *[self._dispatch_async(call["name"], call["input"]) for call in tool_calls]
+            )
+            for call, result in zip(tool_calls, results):
                 messages.append(
                     {
                         "role": "tool",
@@ -212,5 +250,29 @@ class TAORLoop:
             )
         if tool_name == "unload_plugin":
             return self._executor.unload_plugin(name=tool_input["name"])
+
+        return {"error": f"Unknown tool: {tool_name!r}"}
+
+    async def _dispatch_async(
+        self, tool_name: str, tool_input: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Async routing of a tool call to the executor."""
+        if tool_name == "add_plugin":
+            return await self._executor.add_plugin_async(
+                name=tool_input["name"],
+                code=tool_input["code"],
+            )
+        if tool_name == "run_plugin":
+            return await self._executor.run_plugin_async(
+                name=tool_input["name"],
+                input_data=tool_input.get("input_data", {}),
+            )
+        if tool_name == "unload_plugin":
+            return await self._executor.unload_plugin_async(name=tool_input["name"])
+        if tool_name == "run_plugins_parallel":
+            raw_calls = tool_input.get("calls", [])
+            calls = [(c[0], c[1]) for c in raw_calls]
+            results = await self._executor.run_plugins_parallel(calls)
+            return {"results": results}
 
         return {"error": f"Unknown tool: {tool_name!r}"}

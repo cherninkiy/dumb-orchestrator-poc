@@ -1,7 +1,7 @@
 """Tests for TAORLoop."""
 
 import json
-from unittest.mock import MagicMock, call
+from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 
@@ -10,12 +10,19 @@ from core.taor_loop import TAORLoop
 
 @pytest.fixture()
 def mock_llm() -> MagicMock:
-    return MagicMock()
+    llm = MagicMock()
+    llm.chat_async = AsyncMock(side_effect=lambda messages, tools, system="": llm.chat(messages=messages, tools=tools, system=system))
+    return llm
 
 
 @pytest.fixture()
 def mock_executor() -> MagicMock:
-    return MagicMock()
+    executor = MagicMock()
+    executor.add_plugin_async = AsyncMock(side_effect=lambda name, code: executor.add_plugin(name=name, code=code))
+    executor.run_plugin_async = AsyncMock(side_effect=lambda name, input_data: executor.run_plugin(name=name, input_data=input_data))
+    executor.unload_plugin_async = AsyncMock(side_effect=lambda name: executor.unload_plugin(name=name))
+    executor.run_plugins_parallel = AsyncMock(side_effect=lambda calls: [executor.run_plugin(name=n, input_data=i) for n, i in calls])
+    return executor
 
 
 @pytest.fixture()
