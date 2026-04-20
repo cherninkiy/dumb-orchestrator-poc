@@ -24,9 +24,9 @@ Resource manifests:
 - If the orchestrator cannot satisfy the manifest, add_plugin will fail and explain why.
 
 Environment variables for assigned resources:
-- Assigned ports are exposed as PORT_<port>, for example PORT_8000=8000.
+- Assigned ports are exposed as PORT_{port}, for example PORT_8000=8000.
 - Workspace access is exposed as WORKSPACE_PATH.
-- Assigned services are exposed as <SERVICE_NAME>_URI, for example POSTGRES_URI.
+- Assigned services are exposed as {SERVICE_NAME}_URI, for example POSTGRES_URI.
 - Read resource values from os.environ instead of hard-coding them.
 
 Operating principle:

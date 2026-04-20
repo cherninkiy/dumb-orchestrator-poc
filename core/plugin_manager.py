@@ -207,17 +207,12 @@ class PluginManager:
                 return {"error": f"Plugin {name!r} is not loaded."}
 
         version_str = self._current_version_str(name)
-        is_trusted = name in TRUSTED_PLUGINS
         env = self._get_plugin_env(name)
+        has_resource_env = bool(self._resource_assignments.get(name))
+        is_trusted = name in TRUSTED_PLUGINS and not has_resource_env
 
         if is_trusted:
-            result, exec_ms, success, err_type, tb_str = self._call_inprocess(
-                name,
-                plugin,
-                input_data,
-                timeout,
-                env,
-            )
+            result, exec_ms, success, err_type, tb_str = self._call_inprocess(name, plugin, input_data, timeout)
         else:
             result, exec_ms, success, err_type, tb_str = self._call_subprocess(
                 name,
@@ -533,7 +528,8 @@ class PluginManager:
             assigned["ports"] = requested_ports
 
         if requested_volumes:
-            workspace_root = runtime_config.WORKSPACE_PATH.resolve()
+            workspace_path = runtime_config.WORKSPACE_PATH or runtime_config.DEFAULT_WORKSPACE_PATH
+            workspace_root = Path(workspace_path).resolve()
             invalid_volumes: list[str] = []
             for volume in requested_volumes:
                 volume_path = Path(volume)
@@ -545,11 +541,11 @@ class PluginManager:
                     invalid_volumes.append(volume)
             if invalid_volumes:
                 errors.append(
-                    f"Requested volumes must stay under {runtime_config.WORKSPACE_PATH}: {invalid_volumes}."
+                    f"Requested volumes must stay under {workspace_path}: {invalid_volumes}."
                 )
             else:
                 assigned["volumes"] = requested_volumes
-                assigned["workspace"] = str(runtime_config.WORKSPACE_PATH)
+                assigned["workspace"] = str(workspace_path)
 
         if requested_services:
             missing_services = [
@@ -615,7 +611,6 @@ class PluginManager:
         plugin: ModuleType,
         input_data: dict[str, Any],
         timeout: int,
-        env: dict[str, str],
     ) -> tuple[dict[str, Any], float, bool, str | None, str | None]:
         """Run plugin.run() in a background thread with a timeout.
 
@@ -628,18 +623,12 @@ class PluginManager:
         result_queue: queue.Queue[tuple[str, Any]] = queue.Queue()
 
         def _run() -> None:
-            old_env = os.environ.copy()
             try:
-                os.environ.clear()
-                os.environ.update(env)
                 result_queue.put(("ok", run_fn(input_data)))
             except (SystemExit, KeyboardInterrupt):
                 raise
             except Exception as exc:  # noqa: BLE001
                 result_queue.put(("err", (exc, tb.format_exc())))
-            finally:
-                os.environ.clear()
-                os.environ.update(old_env)
 
         start = time.monotonic()
         thread = threading.Thread(target=_run, daemon=True)

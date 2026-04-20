@@ -171,7 +171,7 @@ def test_call_inprocess_without_run_returns_attribute_error(tmp_path: Path) -> N
     manager = PluginManager(plugins_dir)
 
     plugin = ModuleType("m")
-    result, _ms, ok, err_type, tb = manager._call_inprocess("m", plugin, {}, 1, {})
+    result, _ms, ok, err_type, tb = manager._call_inprocess("m", plugin, {}, 1)
 
     assert ok is False
     assert err_type == "AttributeError"
@@ -188,7 +188,7 @@ def test_call_inprocess_timeout_branch(tmp_path: Path) -> None:
     plugin.run = lambda _x: {"ok": True}  # type: ignore[attr-defined]
 
     with patch("queue.Queue.get", side_effect=queue.Empty):
-        result, _ms, ok, err_type, tb = manager._call_inprocess("m", plugin, {}, 1, {})
+        result, _ms, ok, err_type, tb = manager._call_inprocess("m", plugin, {}, 1)
 
     assert ok is False
     assert err_type == "TimeoutError"
@@ -208,7 +208,7 @@ def test_call_inprocess_exception_path_returns_error_with_traceback(tmp_path: Pa
 
     plugin.run = _raise  # type: ignore[attr-defined]
 
-    result, _ms, ok, err_type, tb = manager._call_inprocess("m", plugin, {}, 1, {})
+    result, _ms, ok, err_type, tb = manager._call_inprocess("m", plugin, {}, 1)
     assert ok is False
     assert err_type == "ValueError"
     assert tb is not None
@@ -242,7 +242,7 @@ def test_call_inprocess_systemexit_worker_path(tmp_path: Path) -> None:
 
     with patch("core.plugin_manager.threading.Thread", _FakeThread):
         # Worker exits without writing to queue; main path times out.
-        result, _ms, ok, err_type, tb = manager._call_inprocess("m", plugin, {}, 0.05, {})
+        result, _ms, ok, err_type, tb = manager._call_inprocess("m", plugin, {}, 0.05)
     assert ok is False
     assert err_type == "TimeoutError"
     assert tb is None
