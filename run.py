@@ -27,7 +27,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--ports",
         default=os.environ.get("RAWLLM_PORTS", ""),
-        help="Available ports as a comma-separated list or ranges (for example 8000-8008).",
+        help="Optional available ports as a comma-separated list or ranges (for example 8000-8008).",
     )
     parser.add_argument(
         "--workspace",

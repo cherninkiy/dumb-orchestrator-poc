@@ -528,8 +528,8 @@ class PluginManager:
             assigned["ports"] = requested_ports
 
         if requested_volumes:
-            workspace_path = runtime_config.WORKSPACE_PATH or runtime_config.DEFAULT_WORKSPACE_PATH
-            workspace_root = Path(workspace_path).resolve()
+            workspace_path = runtime_config.WORKSPACE_PATH
+            workspace_root = workspace_path.resolve()
             invalid_volumes: list[str] = []
             for volume in requested_volumes:
                 volume_path = Path(volume)
