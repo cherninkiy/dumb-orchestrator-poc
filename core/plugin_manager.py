@@ -241,12 +241,19 @@ class PluginManager:
         ``plugins_store/current/``.
         """
         path = self.plugins_dir / f"{name}.py"
-        old_assignment = self._resource_assignments.get(name)
-        assignment_result = self._resolve_manifest_resources(name, manifest)
-        if "error" in assignment_result:
-            return assignment_result
+        with self._lock:
+            old_assignment = self._resource_assignments.get(name)
+            assignment_result = self._resolve_manifest_resources(name, manifest)
+            if "error" in assignment_result:
+                return assignment_result
 
-        assigned_resources = assignment_result["assigned"]
+            assigned_resources = assignment_result["assigned"]
+            # Reserve resources optimistically before file I/O.
+            if assigned_resources:
+                self._resource_assignments[name] = assigned_resources
+            else:
+                self._resource_assignments.pop(name, None)
+
         try:
             # Archive existing version before overwriting.
             if path.exists():
@@ -261,20 +268,17 @@ class PluginManager:
             _touch_future(path)
             result = self.reload_plugin(name)
             if "status" in result:
-                if assigned_resources:
-                    self._resource_assignments[name] = assigned_resources
-                else:
-                    self._resource_assignments.pop(name, None)
                 self._save_resource_assignments()
                 _update_current_symlink(self.plugins_dir, name, path)
                 result["assigned"] = assigned_resources
             return result
         except Exception as exc:
-            if old_assignment is not None:
-                self._resource_assignments[name] = old_assignment
-            else:
-                self._resource_assignments.pop(name, None)
-            self._save_resource_assignments()
+            with self._lock:
+                if old_assignment is not None:
+                    self._resource_assignments[name] = old_assignment
+                else:
+                    self._resource_assignments.pop(name, None)
+                self._save_resource_assignments()
             logger.exception("Failed to add plugin %r", name)
             return {"error": str(exc)}
 
