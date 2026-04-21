@@ -6,7 +6,6 @@ import argparse
 import os
 import signal
 import threading
-from pathlib import Path
 
 import core.config as config
 from core.llm import get_llm_client
