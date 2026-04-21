@@ -23,18 +23,21 @@ def _parse_ports(raw: str | None) -> list[int]:
         item = chunk.strip()
         if not item:
             continue
-        try:
-            if "-" in item:
-                start_str, end_str = item.split("-", 1)
-                start = int(start_str)
-                end = int(end_str)
-                if end < start:
-                    raise ValueError(f"Invalid port range: {item!r}")
-                ports.extend(range(start, end + 1))
-            else:
+        if "-" in item:
+            parts = item.split("-", 1)
+            try:
+                start = int(parts[0])
+                end = int(parts[1])
+            except ValueError as exc:
+                raise ValueError(f"Invalid port value: {item!r}") from exc
+            if end < start:
+                raise ValueError(f"Invalid port range: {item!r}")
+            ports.extend(range(start, end + 1))
+        else:
+            try:
                 ports.append(int(item))
-        except ValueError as exc:
-            raise ValueError(f"Invalid port value: {item!r}") from exc
+            except ValueError as exc:
+                raise ValueError(f"Invalid port value: {item!r}") from exc
     return list(dict.fromkeys(ports))
 
 

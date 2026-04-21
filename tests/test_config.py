@@ -15,7 +15,7 @@ def test_parse_ports_rejects_invalid_values() -> None:
 
 
 def test_parse_ports_rejects_invalid_ranges() -> None:
-    with pytest.raises(ValueError, match="Invalid port value"):
+    with pytest.raises(ValueError, match="Invalid port range"):
         config._parse_ports("8002-8000")
 
 
