@@ -2,8 +2,8 @@
 
 ## Getting Help
 
-- **Bug reports & feature requests** — open a [GitHub issue](https://github.com/cherninkiy/dumb-orchestrator-poc/issues) using the provided templates.
-- **Questions & discussions** — use [GitHub Discussions](https://github.com/cherninkiy/dumb-orchestrator-poc/discussions).
+- **Bug reports & feature requests** — open a [GitHub issue](https://github.com/cherninkiy/rawllm/issues) using the provided templates.
+- **Questions & discussions** — use [GitHub Discussions](https://github.com/cherninkiy/rawllm/discussions).
 - **Security vulnerabilities** — see [SECURITY.md](SECURITY.md) for how to report them privately.
 
 ## Documentation

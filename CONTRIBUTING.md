@@ -13,8 +13,8 @@ Thank you for your interest in contributing! This document covers how to set up 
 
 ```bash
 # 1. Fork and clone the repository
-git clone https://github.com/<your-username>/dumb-orchestrator-poc.git
-cd dumb-orchestrator-poc
+git clone https://github.com/<your-username>/rawllm.git
+cd rawllm
 
 # 2. Install runtime dependencies
 pip install -r requirements.txt

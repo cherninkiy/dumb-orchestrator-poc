@@ -218,7 +218,7 @@ rawllm config set ALLOWED_REQUIREMENTS "json,datetime,requests"
 ## Architecture
 
 ```
-rawllm/  (dumb-orchestrator-poc)
+rawllm/
 ├── core/
 │   ├── llm/                    # LLM abstraction subpackage
 │   │   ├── protocol.py         # LLMClientProtocol structural Protocol

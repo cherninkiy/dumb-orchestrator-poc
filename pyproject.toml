@@ -35,10 +35,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/cherninkiy/dumb-orchestrator-poc"
-Repository = "https://github.com/cherninkiy/dumb-orchestrator-poc"
-Changelog = "https://github.com/cherninkiy/dumb-orchestrator-poc/blob/main/CHANGELOG.md"
-"Bug Tracker" = "https://github.com/cherninkiy/dumb-orchestrator-poc/issues"
+Homepage = "https://github.com/cherninkiy/rawllm"
+Repository = "https://github.com/cherninkiy/rawllm"
+Changelog = "https://github.com/cherninkiy/rawllm/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/cherninkiy/rawllm/issues"
 
 [project.scripts]
 rawllm = "cli:cli"

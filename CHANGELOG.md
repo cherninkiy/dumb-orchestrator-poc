@@ -24,4 +24,4 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Notes
 - `rawllm plugin rollback --version <N>` is not yet implemented; the command currently rolls back to the most recently archived version regardless of the `--version` flag.
 
-[0.1.0]: https://github.com/cherninkiy/dumb-orchestrator-poc/releases/tag/v0.1.0
+[0.1.0]: https://github.com/cherninkiy/rawllm/releases/tag/v0.1.0

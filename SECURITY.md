@@ -16,7 +16,7 @@ This project is a research proof-of-concept. Only the latest commit on the defau
 
 To report a vulnerability, please:
 
-1. Open a [private security advisory](https://github.com/cherninkiy/dumb-orchestrator-poc/security/advisories/new) on GitHub (preferred).
+1. Open a [private security advisory](https://github.com/cherninkiy/rawllm/security/advisories/new) on GitHub (preferred).
 2. Or send an email to the repository owner found on their [GitHub profile](https://github.com/cherninkiy).
 
 Include as much of the following information as possible:

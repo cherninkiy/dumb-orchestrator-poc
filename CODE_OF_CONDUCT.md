@@ -22,7 +22,7 @@ We as members, contributors, and leaders pledge to make participation in the Raw
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behaviour may be reported by opening a [GitHub issue](https://github.com/cherninkiy/dumb-orchestrator-poc/issues) or contacting the project maintainers directly.
+Instances of abusive, harassing, or otherwise unacceptable behaviour may be reported by opening a [GitHub issue](https://github.com/cherninkiy/rawllm/issues) or contacting the project maintainers directly.
 
 All complaints will be reviewed and investigated promptly and fairly. Project maintainers are obligated to respect the privacy and security of the reporter.
 
