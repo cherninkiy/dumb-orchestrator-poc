@@ -184,7 +184,7 @@ class TAORLoop:
         Returns:
             The LLM's final text response.
         """
-        user_content = user_prompt or self._startup_prompt
+        user_content = user_prompt if user_prompt is not None else self._startup_prompt
         if context:
             user_content = (
                 f"{user_content}\n\nContext:\n{json.dumps(context, ensure_ascii=False, indent=2)}"

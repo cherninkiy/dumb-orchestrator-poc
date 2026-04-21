@@ -67,6 +67,18 @@ def test_process_request_defaults_to_startup_prompt(
     assert messages[0]["content"] == "Startup task."
 
 
+def test_process_request_empty_string_uses_empty_string_not_startup_prompt(
+    loop: TAORLoop, mock_llm: MagicMock
+) -> None:
+    mock_llm.chat.return_value = {"type": "text", "content": "OK"}
+
+    loop.process_request("")
+
+    _, kwargs = mock_llm.chat.call_args
+    messages = kwargs.get("messages") or mock_llm.chat.call_args[0][0]
+    assert messages[0]["content"] == ""
+
+
 def test_process_request_with_context_includes_context(
     loop: TAORLoop, mock_llm: MagicMock
 ) -> None:
