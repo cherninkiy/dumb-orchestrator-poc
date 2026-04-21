@@ -5,6 +5,17 @@ import pytest
 import core.config as config
 
 
+def test_parse_ports_rejects_out_of_range() -> None:
+    with pytest.raises(ValueError, match="Invalid port value"):
+        config._parse_ports("0")
+
+    with pytest.raises(ValueError, match="Invalid port value"):
+        config._parse_ports("65536")
+
+    with pytest.raises(ValueError, match="Invalid port value"):
+        config._parse_ports("8000-65536")
+
+
 def test_parse_ports_supports_ranges_and_lists() -> None:
     assert config._parse_ports("8000-8002,8080") == [8000, 8001, 8002, 8080]
 

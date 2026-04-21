@@ -61,7 +61,7 @@ def main(argv: list[str] | None = None) -> None:
     args = _parse_args(argv)
 
     ports = config._parse_ports(args.ports)
-    workspace_path = ensure_dir(Path(args.workspace).expanduser())
+    workspace_path = ensure_dir(config._parse_workspace(args.workspace))
     services = config._parse_services(args.services)
     config.configure_runtime_resources(
         ports=ports,

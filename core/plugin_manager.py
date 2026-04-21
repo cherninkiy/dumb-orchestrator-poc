@@ -268,7 +268,8 @@ class PluginManager:
             _touch_future(path)
             result = self.reload_plugin(name)
             if "status" in result:
-                self._save_resource_assignments()
+                with self._lock:
+                    self._save_resource_assignments()
                 _update_current_symlink(self.plugins_dir, name, path)
                 result["assigned"] = assigned_resources
             return result
@@ -599,15 +600,23 @@ class PluginManager:
         logger.info("Plugin %r loaded from %s", name, path)
 
     def _get_plugin_env(self, name: str) -> dict[str, str]:
-        env = os.environ.copy()
+        """Return only resource-specific env overrides for *name*.
+
+        Does NOT include the full process environment so that sensitive
+        variables (API keys, tokens) are not leaked into sandboxed subprocesses
+        or Docker containers.  The subprocess backend merges this dict on top
+        of os.environ at call time via the ``env`` parameter of
+        ``subprocess.run``; the Docker backend receives only these overrides.
+        """
+        overrides: dict[str, str] = {}
         assignments = self._resource_assignments.get(name, {})
         for port in assignments.get("ports", []):
-            env[f"PORT_{port}"] = str(port)
+            overrides[f"PORT_{port}"] = str(port)
         if "workspace" in assignments:
-            env["WORKSPACE_PATH"] = str(assignments["workspace"])
+            overrides["WORKSPACE_PATH"] = str(assignments["workspace"])
         for svc_name, uri in assignments.get("services", {}).items():
-            env[f"{svc_name.upper()}_URI"] = uri
-        return env
+            overrides[f"{svc_name.upper()}_URI"] = uri
+        return overrides
 
     def _call_inprocess(
         self,

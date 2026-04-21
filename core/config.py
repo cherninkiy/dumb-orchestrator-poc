@@ -32,12 +32,17 @@ def _parse_ports(raw: str | None) -> list[int]:
                 raise ValueError(f"Invalid port value: {item!r}") from exc
             if end < start:
                 raise ValueError(f"Invalid port range: {item!r}")
+            if not (1 <= start <= 65535 and 1 <= end <= 65535):
+                raise ValueError(f"Invalid port value: {item!r}")
             ports.extend(range(start, end + 1))
         else:
             try:
-                ports.append(int(item))
+                port = int(item)
             except ValueError as exc:
                 raise ValueError(f"Invalid port value: {item!r}") from exc
+            if not (1 <= port <= 65535):
+                raise ValueError(f"Invalid port value: {item!r}")
+            ports.append(port)
     return list(dict.fromkeys(ports))
 
 

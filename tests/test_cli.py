@@ -17,7 +17,7 @@ def test_resources_list_shows_assignments(tmp_path: Path, monkeypatch) -> None:
         json.dumps({"demo": {"ports": [8000], "volumes": ["data"], "services": {"postgres": "uri"}}}),
         encoding="utf-8",
     )
-    monkeypatch.setattr(cli, "PLUGINS_DIR", plugins_dir)
+    monkeypatch.setenv("PLUGINS_DIR", str(plugins_dir))
 
     result = CliRunner().invoke(cli.cli, ["resources", "list"])
 
@@ -32,7 +32,7 @@ def test_resources_show_returns_error_for_unknown_plugin(
 ) -> None:
     plugins_dir = tmp_path / "plugins"
     plugins_dir.mkdir()
-    monkeypatch.setattr(cli, "PLUGINS_DIR", plugins_dir)
+    monkeypatch.setenv("PLUGINS_DIR", str(plugins_dir))
 
     result = CliRunner().invoke(cli.cli, ["resources", "show", "missing"])
 
