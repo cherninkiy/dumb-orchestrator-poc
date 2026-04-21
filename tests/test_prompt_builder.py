@@ -22,3 +22,14 @@ def test_build_startup_prompt_includes_available_resources() -> None:
 def test_build_startup_prompt_uses_default_task() -> None:
     prompt = build_startup_prompt({"ports": [], "workspace": None, "services": {}}, None)
     assert "create an interface for user interaction using these resources." in prompt
+
+
+def test_build_startup_prompt_non_contiguous_ports_shows_no_misleading_range() -> None:
+    prompt = build_startup_prompt(
+        {"ports": [8000, 8005, 8080], "workspace": None, "services": {}},
+        None,
+    )
+    assert "8000-8080" not in prompt
+    assert "8000" in prompt
+    assert "8005" in prompt
+    assert "8080" in prompt
